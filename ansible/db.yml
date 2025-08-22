@@ -1,22 +1,18 @@
+---
 - name: Deploy DB
   hosts: db
   become: yes
-  vars:
-    db_app_path: /home/ec2-user/db-app
 
   tasks:
-    - name: Enable MariaDB repo
-      yum_repository:
-        name: MariaDB
-        description: MariaDB Repo
-        baseurl: http://yum.mariadb.org/10.6/rhel8-amd64
-        gpgkey: https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
-        gpgcheck: yes
-        state: present
-
-    - name: Install MariaDB server
+    - name: Ensure system is up to date
       yum:
-        name: MariaDB-server
+        name: "*"
+        state: latest
+      ignore_errors: yes
+
+    - name: Install MariaDB server from AppStream
+      yum:
+        name: mariadb-server
         state: present
 
     - name: Enable and start MariaDB service
@@ -24,3 +20,18 @@
         name: mariadb
         enabled: yes
         state: started
+
+    - name: Create database for backend app
+      mysql_db:
+        name: backenddb
+        state: present
+        login_user: root
+
+    - name: Create DB user for backend app
+      mysql_user:
+        name: backenduser
+        password: "backendpass123"
+        priv: "backenddb.*:ALL"
+        host: "%"
+        state: present
+        login_user: root

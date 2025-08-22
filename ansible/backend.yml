@@ -9,8 +9,6 @@
   tasks:
     - name: Enable NodeSource Node.js 20 repo
       shell: curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
-      args:
-        warn: false
 
     - name: Install Node.js and npm
       yum:
