@@ -1,55 +1,74 @@
 ---
-- name: Setup Backend Node.js App
+- name: Deploy Backend App
   hosts: backend
-  become: true
+  become: yes
   vars:
-    app_dir: /home/ec2-user/backend-app
+    backend_app_dir: /home/ec2-user/backend-app
     node_version: 20
+    db_host: "10.0.4.82"
+    db_name: "backenddb"
+    db_user: "backenduser"
+    db_password: "backendpass123"
 
   tasks:
-
-    - name: Install required packages
-      ansible.builtin.yum:
+    - name: Install required tools
+      yum:
         name:
           - curl
-          - git
+          - gcc
+          - make
         state: present
 
-    - name: Enable NodeSource Node.js 20 repo
+    - name: Install Node.js 20 repo
       ansible.builtin.shell: |
         curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
       args:
-        executable: /bin/bash
+        warn: false
 
     - name: Install Node.js
-      ansible.builtin.yum:
+      yum:
         name: nodejs
         state: present
 
-    - name: Create backend app directory
-      ansible.builtin.file:
-        path: "{{ app_dir }}"
+    - name: Ensure backend app directory exists
+      file:
+        path: "{{ backend_app_dir }}"
         state: directory
+
+    - name: Copy backend app files from control node
+      copy:
+        src: "../backend-app/"
+        dest: "{{ backend_app_dir }}/"
         owner: ec2-user
         group: ec2-user
         mode: 0755
 
-    - name: Copy backend app files
+    - name: Install backend app dependencies
+      npm:
+        path: "{{ backend_app_dir }}"
+        production: yes
+
+    - name: Configure backend app environment variables
       ansible.builtin.copy:
-        src: ../backend-app/
-        dest: "{{ app_dir }}/"
+        dest: "{{ backend_app_dir }}/.env"
+        content: |
+          DB_HOST={{ db_host }}
+          DB_NAME={{ db_name }}
+          DB_USER={{ db_user }}
+          DB_PASSWORD={{ db_password }}
+          DB_PORT=5432
         owner: ec2-user
         group: ec2-user
-        mode: 0755
-        remote_src: no
+        mode: 0600
 
-    - name: Install backend dependencies
-      ansible.builtin.command:
-        cmd: npm install
-        chdir: "{{ app_dir }}"
+    - name: Install PM2 globally
+      npm:
+        name: pm2
+        global: yes
 
-    - name: Start backend app
+    - name: Start backend app with PM2
       ansible.builtin.shell: |
-        nohup node server.js > backend.log 2>&1 &
+        pm2 start index.js --name backend --env production
+        pm2 save
       args:
-        chdir: "{{ app_dir }}"
+        chdir: "{{ backend_app_dir }}"

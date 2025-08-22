@@ -1,61 +1,68 @@
 ---
-- name: Setup PostgreSQL 15
+- name: Setup Database Server
   hosts: db
-  become: true
+  become: yes
+
   vars:
-    db_user: backenduser
     db_name: backenddb
-    db_pass: backendpass123
+    db_user: backenduser
+    db_password: backendpass123
+    postgres_version: 15
 
   tasks:
-
-    - name: Install required packages
+    - name: Install required tools
       ansible.builtin.yum:
         name:
           - wget
-          - ca-certificates
+          - gnupg2
         state: present
 
-    - name: Add PostgreSQL 15 repo
+    - name: Add PostgreSQL official repo
       ansible.builtin.yum_repository:
         name: pgdg
-        description: "PostgreSQL 15 repository"
-        baseurl: https://download.postgresql.org/pub/repos/yum/15/redhat/rhel-9-x86_64/
+        description: PostgreSQL {{ postgres_version }} repo
+        baseurl: https://download.postgresql.org/pub/repos/yum/{{ postgres_version }}/redhat/rhel-$releasever-$basearch
         gpgcheck: yes
         enabled: yes
         gpgkey: https://download.postgresql.org/pub/repos/yum/RPM-GPG-KEY-PGDG
 
-    - name: Install PostgreSQL 15 server
+    - name: Disable default PostgreSQL module
+      ansible.builtin.command: dnf -qy module disable postgresql
+      ignore_errors: yes
+
+    - name: Install PostgreSQL server and client
       ansible.builtin.yum:
         name:
-          - postgresql15
-          - postgresql15-server
+          - postgresql{{ postgres_version }}-server
+          - postgresql{{ postgres_version }}
         state: present
 
     - name: Initialize PostgreSQL database
-      ansible.builtin.command: /usr/pgsql-15/bin/postgresql-15-setup initdb
+      ansible.builtin.command: /usr/pgsql-{{ postgres_version }}/bin/postgresql-setup initdb
       args:
-        creates: /var/lib/pgsql/15/data/PG_VERSION
+        creates: /var/lib/pgsql/{{ postgres_version }}/data/PG_VERSION
 
-    - name: Ensure PostgreSQL is running and enabled
+    - name: Enable and start PostgreSQL service
       ansible.builtin.service:
-        name: postgresql-15
+        name: postgresql-{{ postgres_version }}
         state: started
-        enabled: true
+        enabled: yes
 
-    - name: Set PostgreSQL password for default user
+    - name: Set PostgreSQL password for postgres user
       ansible.builtin.postgresql_user:
         name: postgres
-        password: "{{ db_pass }}"
-
-    - name: Create database user
-      ansible.builtin.postgresql_user:
-        name: "{{ db_user }}"
-        password: "{{ db_pass }}"
-        state: present
+        password: "{{ db_password }}"
+        login_user: postgres
 
     - name: Create backend database
       ansible.builtin.postgresql_db:
         name: "{{ db_name }}"
-        owner: "{{ db_user }}"
-        state: present
+        login_user: postgres
+
+    - name: Create backend user
+      ansible.builtin.postgresql_user:
+        name: "{{ db_user }}"
+        password: "{{ db_password }}"
+        db: "{{ db_name }}"
+        priv: "ALL"
+        login_user: postgres
