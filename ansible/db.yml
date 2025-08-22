@@ -1,60 +1,61 @@
 ---
-- name: Configure PostgreSQL DB
+- name: Setup PostgreSQL 15
   hosts: db
-  become: yes
+  become: true
+  vars:
+    db_user: backenduser
+    db_name: backenddb
+    db_pass: backendpass123
 
   tasks:
-    - name: Ensure EPEL repo is enabled
-      ansible.builtin.yum:
-        name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
-        state: present
 
-    - name: Install PostgreSQL 14 server
+    - name: Install required packages
       ansible.builtin.yum:
         name:
-          - postgresql-server
-          - postgresql
+          - wget
+          - ca-certificates
+        state: present
+
+    - name: Add PostgreSQL 15 repo
+      ansible.builtin.yum_repository:
+        name: pgdg
+        description: "PostgreSQL 15 repository"
+        baseurl: https://download.postgresql.org/pub/repos/yum/15/redhat/rhel-9-x86_64/
+        gpgcheck: yes
+        enabled: yes
+        gpgkey: https://download.postgresql.org/pub/repos/yum/RPM-GPG-KEY-PGDG
+
+    - name: Install PostgreSQL 15 server
+      ansible.builtin.yum:
+        name:
+          - postgresql15
+          - postgresql15-server
         state: present
 
     - name: Initialize PostgreSQL database
-      ansible.builtin.command:
-        cmd: postgresql-setup --initdb
+      ansible.builtin.command: /usr/pgsql-15/bin/postgresql-15-setup initdb
       args:
-        creates: /var/lib/pgsql/data/PG_VERSION
+        creates: /var/lib/pgsql/15/data/PG_VERSION
 
-    - name: Ensure PostgreSQL service is enabled and started
+    - name: Ensure PostgreSQL is running and enabled
       ansible.builtin.service:
-        name: postgresql
+        name: postgresql-15
         state: started
-        enabled: yes
+        enabled: true
 
-    - name: Allow password authentication in pg_hba.conf
-      ansible.builtin.lineinfile:
-        path: /var/lib/pgsql/data/pg_hba.conf
-        regexp: '^host\s+all\s+all\s+127\.0\.0\.1/32\s+ident'
-        line: 'host    all             all             0.0.0.0/0               md5'
+    - name: Set PostgreSQL password for default user
+      ansible.builtin.postgresql_user:
+        name: postgres
+        password: "{{ db_pass }}"
+
+    - name: Create database user
+      ansible.builtin.postgresql_user:
+        name: "{{ db_user }}"
+        password: "{{ db_pass }}"
         state: present
-
-    - name: Listen on all interfaces
-      ansible.builtin.lineinfile:
-        path: /var/lib/pgsql/data/postgresql.conf
-        regexp: '^#listen_addresses ='
-        line: "listen_addresses = '*'"
-
-    - name: Restart PostgreSQL to apply configuration
-      ansible.builtin.service:
-        name: postgresql
-        state: restarted
 
     - name: Create backend database
-      community.postgresql.postgresql_db:
-        name: backenddb
-        encoding: UTF8
-        state: present
-
-    - name: Create backend DB user
-      community.postgresql.postgresql_user:
-        name: backenduser
-        password: backendpass123
-        priv: "backenddb:ALL"
+      ansible.builtin.postgresql_db:
+        name: "{{ db_name }}"
+        owner: "{{ db_user }}"
         state: present
