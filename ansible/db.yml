@@ -1,40 +1,60 @@
 ---
-- name: Setup PostgreSQL DB
+- name: Configure PostgreSQL DB
   hosts: db
-  become: true
-  vars:
-    db_name: backenddb
-    db_user: backenduser
-    db_pass: backendpass123
+  become: yes
 
   tasks:
-    - name: Enable PostgreSQL 15 module
-      ansible.builtin.command: dnf module enable -y postgresql:15
-      become: true
+    - name: Ensure EPEL repo is enabled
+      ansible.builtin.yum:
+        name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+        state: present
 
-    - name: Install PostgreSQL server
+    - name: Install PostgreSQL 14 server
       ansible.builtin.yum:
         name:
           - postgresql-server
-          - postgresql-contrib
+          - postgresql
         state: present
-      become: true
 
     - name: Initialize PostgreSQL database
-      ansible.builtin.command: /usr/bin/postgresql-setup --initdb
-      become: true
+      ansible.builtin.command:
+        cmd: postgresql-setup --initdb
+      args:
+        creates: /var/lib/pgsql/data/PG_VERSION
 
-    - name: Ensure PostgreSQL is started and enabled
+    - name: Ensure PostgreSQL service is enabled and started
       ansible.builtin.service:
         name: postgresql
         state: started
-        enabled: true
-      become: true
+        enabled: yes
 
-    - name: Set PostgreSQL password for default user
-      ansible.builtin.shell: |
-        sudo -u postgres psql -c "CREATE USER {{ db_user }} WITH PASSWORD '{{ db_pass }}';"
-        sudo -u postgres psql -c "CREATE DATABASE {{ db_name }} OWNER {{ db_user }};"
-        sudo -u postgres psql -c "ALTER USER {{ db_user }} WITH SUPERUSER;"
-      args:
-        warn: false
+    - name: Allow password authentication in pg_hba.conf
+      ansible.builtin.lineinfile:
+        path: /var/lib/pgsql/data/pg_hba.conf
+        regexp: '^host\s+all\s+all\s+127\.0\.0\.1/32\s+ident'
+        line: 'host    all             all             0.0.0.0/0               md5'
+        state: present
+
+    - name: Listen on all interfaces
+      ansible.builtin.lineinfile:
+        path: /var/lib/pgsql/data/postgresql.conf
+        regexp: '^#listen_addresses ='
+        line: "listen_addresses = '*'"
+
+    - name: Restart PostgreSQL to apply configuration
+      ansible.builtin.service:
+        name: postgresql
+        state: restarted
+
+    - name: Create backend database
+      community.postgresql.postgresql_db:
+        name: backenddb
+        encoding: UTF8
+        state: present
+
+    - name: Create backend DB user
+      community.postgresql.postgresql_user:
+        name: backenduser
+        password: backendpass123
+        priv: "backenddb:ALL"
+        state: present

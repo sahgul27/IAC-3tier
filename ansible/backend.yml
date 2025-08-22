@@ -1,52 +1,54 @@
 ---
-- name: Setup Backend Node.js App
+- name: Configure Backend Node.js App
   hosts: backend
-  become: true
+  become: yes
   vars:
-    backend_app_dir: /home/ec2-user/backend-app
-    node_port: 3000
+    node_version: "20"
 
   tasks:
-    - name: Install EPEL repo (required for some dependencies)
+    - name: Ensure EPEL repo is enabled
       ansible.builtin.yum:
-        name: epel-release
+        name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
         state: present
 
-    - name: Install curl and git
+    - name: Install required packages
       ansible.builtin.yum:
         name:
-          - curl
           - git
+          - curl
         state: present
 
-    - name: Enable NodeSource Node.js 20 repo
-      ansible.builtin.shell: curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+    - name: Add NodeSource Node.js 20 repo
+      ansible.builtin.shell: |
+        curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
       args:
-        warn: false
+        executable: /bin/bash
 
-    - name: Install Node.js
+    - name: Install Node.js 20 and npm
       ansible.builtin.yum:
         name: nodejs
         state: present
 
-    - name: Copy backend app to remote server
-      ansible.builtin.copy:
-        src: ../backend-app/
-        dest: "{{ backend_app_dir }}"
-        owner: ec2-user
-        group: ec2-user
-        mode: '0755'
-      delegate_to: localhost
+    - name: Install pm2 globally
+      ansible.builtin.npm:
+        name: pm2
+        global: yes
 
-    - name: Install npm dependencies
-      ansible.builtin.command: npm install
-      args:
-        chdir: "{{ backend_app_dir }}"
+    - name: Clone backend app repo
+      ansible.builtin.git:
+        repo: 'https://github.com/sahgul27/IAC-3tier.git'
+        dest: /home/ec2-user/backend-app
+        version: main
+        force: yes
 
-    - name: Start backend app using pm2
+    - name: Install backend app dependencies
       ansible.builtin.shell: |
-        npm install -g pm2
-        pm2 start server.js --name backend-app --watch
-        pm2 save
+        npm install
       args:
-        chdir: "{{ backend_app_dir }}"
+        chdir: /home/ec2-user/backend-app
+
+    - name: Start backend app with pm2
+      ansible.builtin.shell: |
+        pm2 start /home/ec2-user/backend-app/server.js --name backend-app --watch
+      args:
+        chdir: /home/ec2-user/backend-app
