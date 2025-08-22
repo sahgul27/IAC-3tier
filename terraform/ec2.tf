@@ -7,19 +7,6 @@ values = ["al2023-ami-*-x86_64"]
 }
 }
 
-
-resource "aws_iam_role_policy_attachment" "ssm_core" {
-role = aws_iam_role.ssm_role.name
-policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-}
-
-
-resource "aws_iam_instance_profile" "ssm_profile" {
-name = "${var.project_name}-ssm-profile"
-role = aws_iam_role.ssm_role.name
-}
-
-
 # FRONTEND EC2 (public)
 resource "aws_instance" "frontend" {
 ami = data.aws_ami.al2023.id

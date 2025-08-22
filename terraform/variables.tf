@@ -10,9 +10,10 @@ variable "project_name" {
   default     = "IAC-3Tier"
 }
 
-variable "allowed_cidr_frontend" {
-  description = "Client CIDR allowed to access the ALB (usually your /32)"
+variable "my_ip" {
+  description = "Client CIDR allowed to access the ALB"
   type        = string
+  default     = "54.209.64.98/32"
 }
 
 variable "key_name" {

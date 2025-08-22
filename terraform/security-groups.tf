@@ -9,7 +9,7 @@ resource "aws_security_group" "alb_sg" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = [var.allowed_cidr_frontend]
+    cidr_blocks = [var.my_ip]
   }
 
   egress {
@@ -125,11 +125,11 @@ resource "aws_security_group" "control_sg" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description = "SSH from your workstation"
+    description = "SSH from your ec2"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = [chomp(data.http.my_ip.response_body)]
+    cidr_blocks = [var.my_ip]
   }
 
   egress {

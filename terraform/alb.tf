@@ -3,7 +3,7 @@ resource "aws_lb" "app_alb" {
   name               = "${var.project_name}-alb"
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb_sg.id]
-  subnets            = [aws_subnet.public_1.id, aws_subnet.public_2.id] # must be at least 2 AZs
+  subnets            = [aws_subnet.public_a.id, aws_subnet.public_b.id] # must be at least 2 AZs
 
   tags = {
     Name = "${var.project_name}-alb"
