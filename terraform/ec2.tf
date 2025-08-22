@@ -52,7 +52,7 @@ tags = { Name = "${var.project_name}-db" }
 }
 
 resource "aws_instance" "bastion" {
-  ami                         = vdata.aws_ami.al2023.id
+  ami                         = data.aws_ami.al2023.id
   instance_type               = var.instance_type
   subnet_id                   = aws_subnet.public_a.id
   associate_public_ip_address = true
