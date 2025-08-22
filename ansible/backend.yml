@@ -1,0 +1,28 @@
+---
+- hosts: backend
+  become: yes
+  tasks:
+    - name: Install Node.js
+      ansible.builtin.shell: |
+        curl -fsSL https://rpm.nodesource.com/setup_{{ nodejs_version }} | bash -
+        yum install -y nodejs git
+
+    - name: Copy backend app files
+      ansible.builtin.copy:
+        src: ../backend-app/
+        dest: /home/{{ app_user }}/backend-app/
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: 0755
+
+    - name: Install dependencies
+      ansible.builtin.shell: |
+        cd /home/{{ app_user }}/backend-app
+        npm install
+
+    - name: Start app with PM2
+      ansible.builtin.shell: |
+        npm install -g pm2
+        pm2 start server.js --name "backend" --watch
+        pm2 startup systemd
+        pm2 save

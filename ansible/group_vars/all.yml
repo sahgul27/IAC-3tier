@@ -1,0 +1,7 @@
+---
+app_user: "ec2-user"
+nodejs_version: "18.x"
+
+db_name: "appdb"
+db_user: "appuser"
+db_password: "StrongPassw0rd!"

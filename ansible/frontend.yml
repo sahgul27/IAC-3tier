@@ -1,0 +1,26 @@
+---
+- hosts: frontend
+  become: yes
+  tasks:
+    - name: Install Node.js
+      ansible.builtin.shell: |
+        curl -fsSL https://rpm.nodesource.com/setup_{{ nodejs_version }} | bash -
+        yum install -y nodejs git
+
+    - name: Clone frontend app
+      ansible.builtin.git:
+        repo: "https://github.com/sahgul27/techtest.git"
+        dest: /home/{{ app_user }}/frontend-app
+        version: master
+
+    - name: Install dependencies
+      ansible.builtin.shell: |
+        cd /home/{{ app_user }}/frontend-app
+        npm install
+
+    - name: Start app with PM2
+      ansible.builtin.shell: |
+        npm install -g pm2
+        pm2 start index.js --name "frontend" --watch
+        pm2 startup systemd
+        pm2 save

@@ -1,0 +1,27 @@
+---
+- hosts: db
+  become: yes
+  tasks:
+    - name: Install MariaDB
+      ansible.builtin.yum:
+        name: mariadb-server
+        state: present
+
+    - name: Start and enable MariaDB
+      ansible.builtin.service:
+        name: mariadb
+        state: started
+        enabled: yes
+
+    - name: Create application DB
+      community.mysql.mysql_db:
+        name: "{{ db_name }}"
+        state: present
+
+    - name: Create DB user
+      community.mysql.mysql_user:
+        name: "{{ db_user }}"
+        password: "{{ db_password }}"
+        priv: "{{ db_name }}.*:ALL"
+        host: "%"
+        state: present
