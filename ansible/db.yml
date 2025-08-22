@@ -1,48 +1,40 @@
 ---
-- name: Deploy DB
+- name: Setup PostgreSQL DB
   hosts: db
-  become: yes
+  become: true
   vars:
     db_name: backenddb
     db_user: backenduser
-    db_password: "backendpass123"
+    db_pass: backendpass123
 
   tasks:
-    - name: Ensure system is up to date
-      yum:
-        name: "*"
-        state: latest
-      ignore_errors: yes
+    - name: Enable PostgreSQL 15 module
+      ansible.builtin.command: dnf module enable -y postgresql:15
+      become: true
 
     - name: Install PostgreSQL server
-      yum:
-        name: postgresql-server
+      ansible.builtin.yum:
+        name:
+          - postgresql-server
+          - postgresql-contrib
         state: present
+      become: true
 
     - name: Initialize PostgreSQL database
-      command: /usr/bin/postgresql-setup --initdb
-      args:
-        creates: /var/lib/pgsql/data/PG_VERSION
+      ansible.builtin.command: /usr/bin/postgresql-setup --initdb
+      become: true
 
-    - name: Enable and start PostgreSQL service
-      systemd:
+    - name: Ensure PostgreSQL is started and enabled
+      ansible.builtin.service:
         name: postgresql
-        enabled: yes
         state: started
+        enabled: true
+      become: true
 
-    - name: Ensure PostgreSQL Python libraries are installed
-      yum:
-        name: python3-psycopg2
-        state: present
-
-    - name: Create database for backend app
-      community.postgresql.postgresql_db:
-        name: "{{ db_name }}"
-        state: present
-
-    - name: Create DB user for backend app
-      community.postgresql.postgresql_user:
-        name: "{{ db_user }}"
-        password: "{{ db_password }}"
-        priv: "{{ db_name }}:ALL"
-        state: present
+    - name: Set PostgreSQL password for default user
+      ansible.builtin.shell: |
+        sudo -u postgres psql -c "CREATE USER {{ db_user }} WITH PASSWORD '{{ db_pass }}';"
+        sudo -u postgres psql -c "CREATE DATABASE {{ db_name }} OWNER {{ db_user }};"
+        sudo -u postgres psql -c "ALTER USER {{ db_user }} WITH SUPERUSER;"
+      args:
+        warn: false
