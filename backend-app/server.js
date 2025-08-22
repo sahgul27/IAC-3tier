@@ -1,11 +1,14 @@
-const express = require('express');
-const app = express();
-const port = 3001; // backend app port
+const { Pool } = require('pg');
 
-app.get('/', (req, res) => {
-  res.send('Hello from Backend!');
+const pool = new Pool({
+  user: 'backenduser',
+  host: 'PRIVATE_DB_IP',
+  database: 'backenddb',
+  password: 'backendpass123',
+  port: 5432,
 });
 
-app.listen(port, () => {
-  console.log(`Backend app listening at http://localhost:${port}`);
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) console.error(err);
+  else console.log('DB Connected:', res.rows[0]);
 });

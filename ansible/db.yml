@@ -2,6 +2,10 @@
 - name: Deploy DB
   hosts: db
   become: yes
+  vars:
+    db_name: backenddb
+    db_user: backenduser
+    db_password: "backendpass123"
 
   tasks:
     - name: Ensure system is up to date
@@ -10,28 +14,35 @@
         state: latest
       ignore_errors: yes
 
-    - name: Install MariaDB server from AppStream
+    - name: Install PostgreSQL server
       yum:
-        name: mariadb-server
+        name: postgresql-server
         state: present
 
-    - name: Enable and start MariaDB service
+    - name: Initialize PostgreSQL database
+      command: /usr/bin/postgresql-setup --initdb
+      args:
+        creates: /var/lib/pgsql/data/PG_VERSION
+
+    - name: Enable and start PostgreSQL service
       systemd:
-        name: mariadb
+        name: postgresql
         enabled: yes
         state: started
 
-    - name: Create database for backend app
-      mysql_db:
-        name: backenddb
+    - name: Ensure PostgreSQL Python libraries are installed
+      yum:
+        name: python3-psycopg2
         state: present
-        login_user: root
+
+    - name: Create database for backend app
+      community.postgresql.postgresql_db:
+        name: "{{ db_name }}"
+        state: present
 
     - name: Create DB user for backend app
-      mysql_user:
-        name: backenduser
-        password: "backendpass123"
-        priv: "backenddb.*:ALL"
-        host: "%"
+      community.postgresql.postgresql_user:
+        name: "{{ db_user }}"
+        password: "{{ db_password }}"
+        priv: "{{ db_name }}:ALL"
         state: present
-        login_user: root
