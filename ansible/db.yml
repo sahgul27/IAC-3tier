@@ -1,27 +1,26 @@
----
-- hosts: db
+- name: Deploy DB
+  hosts: db
   become: yes
+  vars:
+    db_app_path: /home/ec2-user/db-app
+
   tasks:
-    - name: Install MariaDB
+    - name: Enable MariaDB repo
+      yum_repository:
+        name: MariaDB
+        description: MariaDB Repo
+        baseurl: http://yum.mariadb.org/10.6/rhel8-amd64
+        gpgkey: https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+        gpgcheck: yes
+        state: present
+
+    - name: Install MariaDB server
       yum:
-        name: mariadb-server
+        name: MariaDB-server
         state: present
 
-    - name: Start and enable MariaDB
-      ansible.builtin.service:
+    - name: Enable and start MariaDB service
+      systemd:
         name: mariadb
-        state: started
         enabled: yes
-
-    - name: Create application DB
-      community.mysql.mysql_db:
-        name: "{{ db_name }}"
-        state: present
-
-    - name: Create DB user
-      community.mysql.mysql_user:
-        name: "{{ db_user }}"
-        password: "{{ db_password }}"
-        priv: "{{ db_name }}.*:ALL"
-        host: "%"
-        state: present
+        state: started

@@ -1,21 +1,20 @@
----
 - name: Deploy Backend Node.js App
   hosts: backend
   become: yes
   vars:
     backend_app_path: /home/ec2-user/backend-app
     backend_port: 3001
-    local_backend_path: ../backend-app/   # relative to ansible folder
+    local_backend_path: ../backend-app/
 
   tasks:
-    - name: Ensure Node.js is installed
-      amazon.aws.package:
-        name: nodejs
-        state: present
+    - name: Enable NodeSource Node.js 20 repo
+      shell: curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+      args:
+        warn: false
 
-    - name: Ensure npm is installed
-      amazon.aws.package:
-        name: npm
+    - name: Install Node.js and npm
+      yum:
+        name: nodejs
         state: present
 
     - name: Create backend app directory on remote
