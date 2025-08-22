@@ -19,7 +19,7 @@ variable "my_ip" {
 variable "key_name" {
   description = "Existing EC2 key pair name to SSH from your control node"
   type        = string
-  default     = "login.pem"
+  default     = "login"
 }
 
 variable "instance_type" {
