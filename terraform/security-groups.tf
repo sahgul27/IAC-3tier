@@ -9,7 +9,7 @@ resource "aws_security_group" "alb_sg" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = [var.my_ip]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -41,7 +41,7 @@ resource "aws_security_group" "frontend_sg" {
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"
-    security_groups = [aws_security_group.control_sg.id]
+    security_groups = [aws_security_group.bastion_sg.id]
   }
 
   egress {
@@ -73,7 +73,7 @@ resource "aws_security_group" "backend_sg" {
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"
-    security_groups = [aws_security_group.control_sg.id]
+    security_groups = [aws_security_group.bastion_sg.id]
   }
 
   egress {
@@ -105,7 +105,7 @@ resource "aws_security_group" "db_sg" {
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"
-    security_groups = [aws_security_group.control_sg.id]
+    security_groups = [aws_security_group.bastion_sg]
   }
 
   egress {
@@ -118,11 +118,9 @@ resource "aws_security_group" "db_sg" {
   tags = { Name = "${var.project_name}-db-sg" }
 }
 
-# Security Group for Control EC2 (Ansible admin node)
-resource "aws_security_group" "control_sg" {
-  name        = "${var.project_name}-control-sg"
-  description = "Allows SSH from your workstation to control node"
-  vpc_id      = aws_vpc.main.id
+resource "aws_security_group" "bastion_sg" {
+  name   = "${var.project_name}-bastion-sg"
+  vpc_id = aws_vpc.main.id
 
   ingress {
     description = "SSH from your ec2"
@@ -139,5 +137,7 @@ resource "aws_security_group" "control_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = { Name = "${var.project_name}-control-sg" }
+  tags = {
+    Name = "${var.project_name}-bastion-sg"
+  }
 }
