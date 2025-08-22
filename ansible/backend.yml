@@ -1,28 +1,48 @@
 ---
-- hosts: backend
+- name: Deploy Backend Node.js App
+  hosts: backend
   become: yes
+  vars:
+    backend_app_path: /home/ec2-user/backend-app
+    backend_port: 3001
+    local_backend_path: ../backend-app/   # relative to ansible folder
+
   tasks:
-    - name: Install Node.js
-      ansible.builtin.shell: |
-        curl -fsSL https://rpm.nodesource.com/setup_{{ nodejs_version }} | bash -
-        yum install -y nodejs git
+    - name: Ensure Node.js is installed
+      amazon.aws.package:
+        name: nodejs
+        state: present
 
-    - name: Copy backend app files
-      ansible.builtin.copy:
-        src: ../backend-app/
-        dest: /home/{{ app_user }}/backend-app/
-        owner: "{{ app_user }}"
-        group: "{{ app_user }}"
-        mode: 0755
+    - name: Ensure npm is installed
+      amazon.aws.package:
+        name: npm
+        state: present
 
-    - name: Install dependencies
-      ansible.builtin.shell: |
-        cd /home/{{ app_user }}/backend-app
-        npm install
+    - name: Create backend app directory on remote
+      file:
+        path: "{{ backend_app_path }}"
+        state: directory
+        owner: ec2-user
+        group: ec2-user
+        mode: '0755'
 
-    - name: Start app with PM2
-      ansible.builtin.shell: |
-        npm install -g pm2
-        pm2 start server.js --name "backend" --watch
-        pm2 startup systemd
-        pm2 save
+    - name: Copy backend app files from control node
+      copy:
+        src: "{{ local_backend_path }}"
+        dest: "{{ backend_app_path }}/"
+        owner: ec2-user
+        group: ec2-user
+        mode: '0755'
+        remote_src: no
+
+    - name: Install backend app dependencies
+      npm:
+        path: "{{ backend_app_path }}"
+        production: no
+
+    - name: Start backend app in background
+      shell: "nohup node server.js > backend.log 2>&1 &"
+      args:
+        chdir: "{{ backend_app_path }}"
+      async: 0
+      poll: 0

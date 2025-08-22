@@ -3,7 +3,7 @@
   become: yes
   tasks:
     - name: Install MariaDB
-      ansible.builtin.yum:
+      yum:
         name: mariadb-server
         state: present
 
