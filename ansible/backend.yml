@@ -5,6 +5,7 @@
     db_name: "backenddb"
     db_user: "backenduser"
     db_password: "backendpass123" # Store in Secrets Manager in production
+
   tasks:
     - name: Install Node.js
       dnf:
@@ -27,12 +28,14 @@
 
     - name: Copy backend app
       copy:
-        src: "/home/ec2-user/terraform/IAC-3tier/backend-app/"
-        dest: /app
-        mode: '0644'
+        src: "../backend-app/"
+        dest: /app/
+        owner: ec2-user
+        group: ec2-user
+        mode: '0755'
 
     - name: Install dependencies
-      command: npm install pg
+      command: npm install
       args:
         chdir: /app
       register: npm_install
@@ -45,6 +48,7 @@
           DB_NAME={{ db_name }}
           DB_USER={{ db_user }}
           DB_PASSWORD={{ db_password }}
+          DB_PORT=5432
         dest: /app/.env
         mode: '0600'
 
