@@ -13,7 +13,7 @@ variable "project_name" {
 variable "my_ip" {
   description = "Client CIDR allowed to access the ALB"
   type        = string
-  default     = "54.209.64.98/32"
+  default     = "98.87.1.149/32"
 }
 
 variable "key_name" {
