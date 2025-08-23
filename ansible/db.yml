@@ -7,44 +7,53 @@
 
   tasks:
     - name: Install PostgreSQL server and client
-      yum:
+      dnf:
         name:
-          - postgresql
-          - postgresql-server
-          - postgresql-contrib
+          - postgresql15
+          - postgresql15-server
         state: present
 
     - name: Initialize PostgreSQL database
-      command: postgresql-setup initdb
+      command: /usr/bin/postgresql-setup --initdb
       args:
         creates: /var/lib/pgsql/data/postgresql.conf
 
-    - name: Ensure PostgreSQL is started and enabled
+    - name: Enable and start PostgreSQL
       systemd:
         name: postgresql
-        state: started
         enabled: yes
+        state: started
 
-    - name: Update pg_hba.conf to allow password authentication
+    - name: Configure pg_hba.conf for password authentication
       lineinfile:
         path: /var/lib/pgsql/data/pg_hba.conf
-        line: "host {{ db_name }} {{ db_user }} 0.0.0.0/0 md5"
+        line: "host    {{ db_name }}    {{ db_user }}    0.0.0.0/0    md5"
         insertafter: "^# IPv4 local connections:"
+      notify: Restart PostgreSQL
+
+    - name: Ensure PostgreSQL listens on all addresses
+      lineinfile:
+        path: /var/lib/pgsql/data/postgresql.conf
+        regexp: '^#?listen_addresses =.*'
+        line: "listen_addresses = '*'"
       notify: Restart PostgreSQL
 
     - name: Create database
       community.postgresql.postgresql_db:
         name: "{{ db_name }}"
         state: present
-      become_user: postgres
+        login_host: "127.0.0.1"
+        login_user: postgres
 
     - name: Create database user
       community.postgresql.postgresql_user:
         name: "{{ db_user }}"
         password: "{{ db_password }}"
-        priv: "ALL/{{ db_name }}"
+        db: "{{ db_name }}"
+        priv: "ALL"
         state: present
-      become_user: postgres
+        login_host: "127.0.0.1"
+        login_user: postgres
 
     - name: Create users table
       community.postgresql.postgresql_query:
@@ -57,7 +66,6 @@
             username VARCHAR(50) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
-      become_user: postgres
 
   handlers:
     - name: Restart PostgreSQL
