@@ -44,6 +44,7 @@
         state: present
         login_host: "127.0.0.1"
         login_user: postgres
+        login_password: "postgres123"
 
     - name: Create database user
       community.postgresql.postgresql_user:
@@ -54,6 +55,7 @@
         state: present
         login_host: "127.0.0.1"
         login_user: postgres
+        login_password: "postgres123"
 
     - name: Create users table
       community.postgresql.postgresql_query:
