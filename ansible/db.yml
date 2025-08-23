@@ -3,11 +3,12 @@
   vars:
     db_name: "backenddb"
     db_user: "backenduser"
-    db_password: "backendpass123" # Store in Secrets Manager in production
+    db_password: "backendpass123"
   tasks:
-    - name: Install PostgreSQL server
+    - name: Install dependencies
       dnf:
-        name: 
+        name:
+          - openldap
           - postgresql
           - postgresql-server
         state: present
@@ -17,6 +18,8 @@
       args:
         creates: /var/lib/pgsql/data/postgresql.conf
       become_user: postgres
+      register: initdb_result
+      failed_when: initdb_result.rc != 0
 
     - name: Start and enable PostgreSQL
       systemd:
