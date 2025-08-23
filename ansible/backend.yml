@@ -27,7 +27,7 @@
 
     - name: Copy backend app
       copy:
-        src: ../backend-app
+        src: "/home/ec2-user/terraform/IAC-3tier/backend-app/"
         dest: /app
         mode: '0644'
 
