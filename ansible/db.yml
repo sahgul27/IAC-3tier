@@ -1,68 +1,65 @@
----
-- name: Setup Database Server
-  hosts: db
+- hosts: db
   become: yes
-
   vars:
-    db_name: backenddb
-    db_user: backenduser
-    db_password: backendpass123
-    postgres_version: 15
-
+    db_name: "backenddb"
+    db_user: "backenduser"
+    db_password: "backendpass123" # Store in Secrets Manager in production
   tasks:
-    - name: Install required tools
-      ansible.builtin.yum:
-        name:
-          - wget
-          - gnupg2
+    - name: Install PostgreSQL server
+      dnf:
+        name: 
+          - postgresql
+          - postgresql-server
         state: present
 
-    - name: Add PostgreSQL official repo
-      ansible.builtin.yum_repository:
-        name: pgdg
-        description: PostgreSQL {{ postgres_version }} repo
-        baseurl: https://download.postgresql.org/pub/repos/yum/{{ postgres_version }}/redhat/rhel-$releasever-$basearch
-        gpgcheck: yes
-        enabled: yes
-        gpgkey: https://download.postgresql.org/pub/repos/yum/RPM-GPG-KEY-PGDG
-
-    - name: Disable default PostgreSQL module
-      ansible.builtin.command: dnf -qy module disable postgresql
-      ignore_errors: yes
-
-    - name: Install PostgreSQL server and client
-      ansible.builtin.yum:
-        name:
-          - postgresql{{ postgres_version }}-server
-          - postgresql{{ postgres_version }}
-        state: present
-
-    - name: Initialize PostgreSQL database
-      ansible.builtin.command: /usr/pgsql-{{ postgres_version }}/bin/postgresql-setup initdb
+    - name: Initialize PostgreSQL
+      command: postgresql-setup --initdb
       args:
-        creates: /var/lib/pgsql/{{ postgres_version }}/data/PG_VERSION
+        creates: /var/lib/pgsql/data/postgresql.conf
+      become_user: postgres
 
-    - name: Enable and start PostgreSQL service
-      ansible.builtin.service:
-        name: postgresql-{{ postgres_version }}
+    - name: Start and enable PostgreSQL
+      systemd:
+        name: postgresql
         state: started
         enabled: yes
 
-    - name: Set PostgreSQL password for postgres user
-      ansible.builtin.postgresql_user:
-        name: postgres
-        password: "{{ db_password }}"
-        login_user: postgres
+    - name: Update pg_hba.conf to allow password authentication
+      lineinfile:
+        path: /var/lib/pgsql/data/pg_hba.conf
+        line: "host {{ db_name }} {{ db_user }} 0.0.0.0/0 md5"
+        insertafter: "^# IPv4 local connections:"
+      notify: Restart PostgreSQL
 
-    - name: Create backend database
-      ansible.builtin.postgresql_db:
+    - name: Create database
+      community.postgresql.postgresql_db:
         name: "{{ db_name }}"
-        login_user: postgres
+        state: present
+      become_user: postgres
 
-    - name: Create backend user
-      ansible.builtin.postgresql_user:
+    - name: Create database user
+      community.postgresql.postgresql_user:
         name: "{{ db_user }}"
         password: "{{ db_password }}"
+        priv: "ALL/{{ db_name }}"
+        state: present
+      become_user: postgres
+
+    - name: Create table
+      community.postgresql.postgresql_query:
         db: "{{ db_name }}"
-        priv: "ALL"
-        login_user: postgres
+        login_user: "{{ db_user }}"
+        login_password: "{{ db_password }}"
+        query: |
+          CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(50) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+      become_user: postgres
+
+  handlers:
+    - name: Restart PostgreSQL
+      systemd:
+        name: postgresql
+        state: restarted
