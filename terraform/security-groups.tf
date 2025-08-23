@@ -70,8 +70,8 @@ resource "aws_security_group" "backend_sg" {
 
   ingress {
     description     = "Allow API traffic from frontend"
-    from_port       = 8080
-    to_port         = 8080
+    from_port       = 3000
+    to_port         = 3000
     protocol        = "tcp"
     security_groups = [aws_security_group.frontend_sg.id]
   }
