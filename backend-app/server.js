@@ -1,28 +1,34 @@
-require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
 
 const app = express();
 const port = 3000;
 
+// PostgreSQL connection pool
 const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT || 5432,
+  host: "db1",          // or private IP of DB server
+  user: "backenduser",
+  password: "backendpass123",
+  database: "backenddb",
+  port: 5432
 });
 
-app.get('/', async (req, res) => {
+// Root route
+app.get('/', (req, res) => {
+  res.send('Backend is running!');
+});
+
+// /users route
+app.get('/users', async (req, res) => {
   try {
-    const result = await pool.query('SELECT NOW()');
-    res.send(`Hello from Backend! DB Time: ${result.rows[0].now}`);
+    const result = await pool.query('SELECT * FROM users');
+    res.json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).send('Database connection failed');
+    res.status(500).send("Database query failed");
   }
 });
 
 app.listen(port, () => {
-  console.log(`Backend app running at http://localhost:${port}`);
+  console.log(`Backend listening at http://0.0.0.0:${port}`);
 });
