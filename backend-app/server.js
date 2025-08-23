@@ -6,7 +6,7 @@ const port = 3000;
 
 // PostgreSQL connection pool
 const pool = new Pool({
-  host: "db1",          // or private IP of DB server
+  host: "10.0.4.82",      
   user: "backenduser",
   password: "backendpass123",
   database: "backenddb",
