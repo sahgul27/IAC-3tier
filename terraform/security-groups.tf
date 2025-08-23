@@ -5,7 +5,7 @@ resource "aws_security_group" "alb_sg" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description = "Allow HTTP from limited client CIDR"
+    description = "Allow HTTP"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -37,7 +37,7 @@ resource "aws_security_group" "frontend_sg" {
   }
 
   ingress {
-    description     = "SSH from control node only"
+    description     = "SSH from bastion only"
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"
@@ -45,7 +45,7 @@ resource "aws_security_group" "frontend_sg" {
   }
 
   ingress {
-    description     = "SSH from control node only"
+    description     = "SSH from your ec2"
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"
@@ -77,7 +77,7 @@ resource "aws_security_group" "backend_sg" {
   }
 
   ingress {
-    description     = "SSH from control node only"
+    description     = "SSH from bastion only"
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"
@@ -109,7 +109,7 @@ resource "aws_security_group" "db_sg" {
   }
 
   ingress {
-    description     = "SSH from control node only"
+    description     = "SSH from bastion only"
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"
