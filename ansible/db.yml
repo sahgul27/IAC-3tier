@@ -4,24 +4,22 @@
     db_name: "backenddb"
     db_user: "backenduser"
     db_password: "backendpass123"
+
   tasks:
-    - name: Install dependencies
-      dnf:
+    - name: Install PostgreSQL server and client
+      yum:
         name:
-          - openldap
           - postgresql
           - postgresql-server
+          - postgresql-contrib
         state: present
 
-    - name: Initialize PostgreSQL
-      command: postgresql-setup --initdb
+    - name: Initialize PostgreSQL database
+      command: postgresql-setup initdb
       args:
         creates: /var/lib/pgsql/data/postgresql.conf
-      become_user: postgres
-      register: initdb_result
-      failed_when: initdb_result.rc != 0
 
-    - name: Start and enable PostgreSQL
+    - name: Ensure PostgreSQL is started and enabled
       systemd:
         name: postgresql
         state: started
@@ -48,7 +46,7 @@
         state: present
       become_user: postgres
 
-    - name: Create table
+    - name: Create users table
       community.postgresql.postgresql_query:
         db: "{{ db_name }}"
         login_user: "{{ db_user }}"
