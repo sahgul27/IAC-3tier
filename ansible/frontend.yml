@@ -12,6 +12,8 @@
         repo: "https://github.com/sahgul27/techtest.git"
         dest: /home/{{ app_user }}/frontend-app
         version: main
+        force: no
+        update: yes
 
     - name: Install dependencies
       ansible.builtin.shell: |
